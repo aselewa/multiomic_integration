@@ -1,5 +1,5 @@
 ---
-title: "Integration Project"
+title: "Integration Benchmarks"
 theme: flatly
 output: html_document
 ---
@@ -10,7 +10,6 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ### Introduction
 
-Here you will find links to analyses of the heart atlas project.
+Here you will find links to analyses of Seurat integration and benchmarks.
 
-* [Donor 03231](integration_workflow.html)
-
+* [Exploration of pbmc multiome data](heart_single_cell.html)
