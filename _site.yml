@@ -1,0 +1,15 @@
+name: "Integration Project"
+output_dir: '.'
+navbar:
+  title: "Integration Project"
+  left:
+    - text: "Home"
+      href: index.html
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    theme: flatly
+    highlight: textmate
+    lib_dir: site_libs
+    self_contained: no

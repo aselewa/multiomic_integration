@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Alan Selewa" />
+
+
+<title>Assessing Seurat Integration</title>
+
+<script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/flatly.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+<style type="text/css">
+h1 {
+  font-size: 34px;
+}
+h1.title {
+  font-size: 38px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 16px;
+}
+h6 {
+  font-size: 12px;
+}
+.table th:not([align]) {
+  text-align: left;
+}
+</style>
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+</style>
+
+
+<style type="text/css">
+/* padding for bootstrap navbar */
+body {
+  padding-top: 60px;
+  padding-bottom: 40px;
+}
+/* offset scroll position for anchor links (for fixed navbar)  */
+.section h1 {
+  padding-top: 65px;
+  margin-top: -65px;
+}
+.section h2 {
+  padding-top: 65px;
+  margin-top: -65px;
+}
+.section h3 {
+  padding-top: 65px;
+  margin-top: -65px;
+}
+.section h4 {
+  padding-top: 65px;
+  margin-top: -65px;
+}
+.section h5 {
+  padding-top: 65px;
+  margin-top: -65px;
+}
+.section h6 {
+  padding-top: 65px;
+  margin-top: -65px;
+}
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #ffffff;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script>
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark it active
+  menuAnchor.parent().addClass('active');
+
+  // if it's got a parent navbar menu mark it active as well
+  menuAnchor.closest('li.dropdown').addClass('active');
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "&#xe258;";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row-fluid">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">Integration Project</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div class="fluid-row" id="header">
+
+
+
+<h1 class="title toc-ignore">Assessing Seurat Integration</h1>
+<h4 class="author">Alan Selewa</h4>
+
+</div>
+
+
+<pre class="r"><code>setwd(&#39;/project2/gca/aselewa/integration_benchmarks/&#39;)
+suppressMessages(source(&#39;seurat_integration.R&#39;))</code></pre>
+<pre class="r"><code>s.rna &lt;- readRDS(&#39;data/rna_seurat.rds&#39;)
+s.atac &lt;- readRDS(&#39;data/atac_seurat.rds&#39;)
+anchors &lt;- readRDS(&#39;data/anchors_kanchor_5.rds&#39;)</code></pre>
+<pre class="r"><code>p1 &lt;- DimPlot(s.rna, label=T, group.by=&#39;clusters&#39;) + NoLegend() + ggtitle(&#39;scRNA-seq&#39;)
+p2 &lt;- DimPlot(s.atac, label=T, group.by=&#39;clusters&#39;) + NoLegend() + ggtitle(&#39;scATAC-seq&#39;)
+p1 + p2</code></pre>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
+<pre class="r"><code>cells1 &lt;- anchors@anchors[,&quot;cell1&quot;]
+cells2 &lt;- anchors@anchors[,&quot;cell2&quot;]</code></pre>
+<pre class="r"><code>num_cells &lt;- c(length(unique(cells1)), length(unique(cells2)))/length(Cells(s.rna))
+names(num_cells) &lt;- c(&#39;RNA&#39;, &#39;ATAC&#39;)
+barplot(num_cells, ylab=&#39;Proportion of Cells&#39;,xlab=&#39;Assay&#39;, main=&#39;Contribution to Anchors&#39;)</code></pre>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-5-1.png" width="672" /></p>
+<pre class="r"><code>freq_cells1 &lt;- table(cells1)
+hist_cells1 &lt;- rep(0, max(freq_cells1))
+for(i in 1:max(freq_cells1)){
+  hist_cells1[i] &lt;- sum(freq_cells1==i)
+}
+barplot(hist_cells1, names.arg = 1:max(freq_cells1), ylab=&#39;Number of Cells&#39;, xlab=&#39;Frequency&#39;, main=&#39;Frequency of cells used in Anchors (RNA)&#39;)</code></pre>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
+<pre class="r"><code>same_cell &lt;- c(sum(cells1 == cells2), sum(cells1 != cells2))
+names(same_cell) &lt;- c(&#39;same cell&#39;, &#39;different cell&#39;)
+barplot(same_cell, ylab=&#39;Anchors&#39;,xlab=&#39;Anchor Pairs&#39;, main=&#39;Anchor Pair Correspondence&#39;)</code></pre>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
+<pre class="r"><code>cells1_clust &lt;- as.character(s.rna$clusters[cells1])
+cells2_clust &lt;- as.character(s.atac$clusters[cells2])
+cell_type_agree &lt;- c(sum(cells1_clust != cells2_clust), sum(cells1_clust == cells2_clust))
+names(cell_type_agree) &lt;- c(&#39;Disagree&#39;, &#39;Agree&#39;)
+
+scores_agree &lt;- anchors@anchors[cells1_clust == cells2_clust, &quot;score&quot;]
+scores_disagree &lt;- anchors@anchors[cells1_clust != cells2_clust, &quot;score&quot;]
+
+par(mfrow=c(1,2))
+barplot(cell_type_agree, ylab=&#39;Anchors&#39;,xlab=&#39;Cell Type Assignment&#39;, main=&#39;Anchors Cluster Agreement&#39;)
+boxplot(scores_disagree, scores_agree, names = c(&#39;Disagree&#39;,&#39;Agree&#39;), ylab=&#39;Anchor Score&#39;, main=&#39;Anchor Scores&#39;)</code></pre>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
+<div id="label-transfer" class="section level2">
+<h2>Label Transfer</h2>
+<pre class="r"><code>s.atac &lt;- transfer_data(ATAC = s.atac, data = Idents(s.rna), anchors = anchors)</code></pre>
+<pre><code>## Finding integration vectors</code></pre>
+<pre><code>## Finding integration vector weights</code></pre>
+<pre><code>## Predicting cell labels</code></pre>
+<pre class="r"><code>p1 &lt;- DimPlot(s.rna, label=T) + NoLegend() + ggtitle(&#39;scRNA-seq&#39;)
+p2 &lt;- DimPlot(s.atac, label=T, group.by=&#39;RNA_IDENT&#39;) + NoLegend() + ggtitle(&#39;scATAC-seq&#39;)
+p1 + p2</code></pre>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-9-1.png" width="672" /></p>
+<pre class="r"><code>cell_type_agree &lt;- c(sum(s.atac$RNA_IDENT != s.atac$clusters), sum(s.atac$RNA_IDENT == s.atac$clusters))
+names(cell_type_agree) &lt;- c(&#39;Disagree&#39;, &#39;Agree&#39;)
+
+scores_agree &lt;- s.atac$PREDICTED_SCORE_MAX[s.atac$RNA_IDENT != s.atac$clusters]
+scores_disagree &lt;- s.atac$PREDICTED_SCORE_MAX[s.atac$RNA_IDENT == s.atac$clusters]
+
+par(mfrow=c(1,2))
+barplot(cell_type_agree, ylab=&#39;ATAC Cells&#39;,xlab=&#39;Transferred Label Status&#39;, main=&#39;ATAC Label Transfer&#39;)
+boxplot(scores_agree, scores_disagree, names = c(&#39;Disagree&#39;,&#39;Agree&#39;), ylab=&#39;Max Predicted Score&#39;, xlab=&#39;Transferred Label Status&#39;, main=&#39;ATAC Label Transfer Max Score&#39;)</code></pre>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-10-1.png" width="672" /></p>
+<pre class="r"><code>hist(s.atac$PREDICTED_SCORE_MAX, main=&#39;Maximum Predicted Score&#39;,xlab=&#39;Score&#39;)</code></pre>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-11-1.png" width="672" /></p>
+</div>
+<div id="rna-transfer" class="section level2">
+<h2>RNA Transfer</h2>
+<p>Transfer counts</p>
+<pre class="r"><code>og.data &lt;- as.matrix(s.rna@assays$RNA@data)
+imputed.rna &lt;- TransferData(anchorset = anchors, refdata = og.data, weight.reduction = &#39;cca&#39;)</code></pre>
+<pre><code>## Finding integration vectors</code></pre>
+<pre><code>## Finding integration vector weights</code></pre>
+<pre><code>## Transfering 22877 features onto reference data</code></pre>
+<div id="correlations-before-and-after-imputations" class="section level4">
+<h4>Correlations before and after imputations</h4>
+<pre class="r"><code>imputed.rna.mat &lt;- as.matrix(imputed.rna@data)
+topN &lt;- order(rowSums(og.data), decreasing = T)[1:100]
+topN.imputed &lt;- imputed.rna.mat[topN,]
+topN.og &lt;- og.data[topN,]
+gene.cor &lt;- rep(0, length(topN))
+for(i in 1:length(topN)){
+  x &lt;- topN.imputed[i,]
+  y &lt;- topN.og[i,]
+  gene.cor[i] &lt;- cor(x, y, method = &#39;pearson&#39;)
+}</code></pre>
+<pre class="r"><code>n &lt;- dim(imputed.rna.mat)[2]
+cell.cor &lt;- rep(0, n)
+for(i in 1:n){
+  bol &lt;- imputed.rna.mat[,i] &gt; 0
+  x &lt;- imputed.rna.mat[,i][bol]
+  y &lt;- og.data[,i][bol]
+  cell.cor[i] &lt;- cor(x, y, method = &#39;pearson&#39;)
+}</code></pre>
+<pre class="r"><code>par(mfrow=c(1,2))
+hist(cell.cor, xlab=&#39;Pearson&#39;, main=&#39;Cells&#39;)
+hist(gene.cor, xlab=&#39;Pearson&#39;, main=&#39;Top 100 Genes&#39;)</code></pre>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-15-1.png" width="672" /></p>
+</div>
+<div id="co-expression-of-pair-markers" class="section level4">
+<h4>Co-expression of pair markers</h4>
+<p>Below we check that co-expressed marker genes remain co-expressed in the imputed data</p>
+<pre class="r"><code>gene.1 &lt;- c(&quot;IL7R&quot;,&quot;IL7R&quot;,&quot;CD14&quot;,&quot;FCGR3A&quot;,&quot;FCER1A&quot;,&quot;MS4A1&quot;)
+gene.2 &lt;- c(&quot;CCR7&quot;,&quot;S100A4&quot;,&quot;LYZ&quot;,&quot;MS4A7&quot;,&quot;CST3&quot;, &quot;CD79A&quot;)
+k &lt;- length(gene.1)
+imputed.cors &lt;- rep(0, k)
+og.cors &lt;- rep(0, k)
+text.lab &lt;- rep(0, k)
+for(i in 1:k){
+  imputed.cors[i] &lt;- cor(imputed.rna.mat[gene.1[i],], imputed.rna.mat[gene.2[i],])
+  og.cors[i] &lt;- cor(og.data[gene.1[i],], og.data[gene.2[i],])
+  text.lab[i] &lt;- paste0(gene.1[i],&#39;/&#39;,gene.2[i])
+}</code></pre>
+<pre class="r"><code>plot(og.cors, imputed.cors, pch=16, xlab=&#39;Original Data Pearson&#39;, ylab=&#39;Transfer Data Pearson&#39;, xlim = c(-0.2,1), ylim=c(-0.2,1))
+text(x = og.cors, y = imputed.cors, labels = text.lab, pos = 4)
+abline(a = 0, b = 1, col=&#39;red&#39;)</code></pre>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-17-1.png" width="672" /></p>
+<p>As we can see, co-expressed genes remain co-expressed in the transferred RNA.</p>
+</div>
+<div id="enhancergene-correlations" class="section level4">
+<h4>Enhancer/gene correlations</h4>
+<pre class="r"><code>imputed.rna.mat &lt;- as.matrix(imputed.rna@data)
+og.data &lt;- as.matrix(s.rna@assays$RNA@data)</code></pre>
+<p>Here, we find all genes within 10kb of all peaks in the scATAC-seq data (~62k peaks)</p>
+<pre class="r"><code>annotations &lt;- suppressWarnings(suppressMessages(GetGRangesFromEnsDb(ensdb = EnsDb.Hsapiens.v86::EnsDb.Hsapiens.v86, verbose = F)))
+seqlevelsStyle(annotations) &lt;- &quot;UCSC&quot;
+exon_annotations &lt;- annotations[annotations$type==&quot;exon&quot;,]
+
+DA_peaks_GR &lt;- granges(s.atac)
+DA_peaks_genes &lt;- plyranges::join_overlap_left(x = DA_peaks_GR, y = exon_annotations, maxgap=10000, minoverlap=0)</code></pre>
+<pre><code>## Warning in .Seqinfo.mergexy(x, y): Each of the 2 combined objects has sequence levels not in the other:
+##   - in &#39;x&#39;: GL000194.1, GL000195.1, GL000205.2, GL000219.1, KI270713.1, KI270726.1, KI270727.1, KI270728.1
+##   - in &#39;y&#39;: chrM
+##   Make sure to always combine/compare objects based on the same reference
+##   genome (use suppressWarnings() to suppress this warning).</code></pre>
+<pre class="r"><code>peakies &lt;- Signac::GRangesToString(DA_peaks_genes)
+genes &lt;- DA_peaks_genes$gene_name
+comb &lt;- paste0(peakies, &#39;-&#39;, genes)
+peakies &lt;- peakies[!duplicated(comb)]
+genes &lt;- genes[!duplicated(comb)]
+
+enhancers_genes_df &lt;- cbind(peakies, genes)
+enhancers_genes_df &lt;- enhancers_genes_df[!is.na(enhancers_genes_df[,&quot;genes&quot;]),]</code></pre>
+<pre class="r"><code>enhancers_genes_df &lt;- enhancers_genes_df[enhancers_genes_df[,&quot;genes&quot;] %in% rownames(og.data),]
+atac.mat &lt;- as.matrix(s.atac@assays$peaks@data)
+DA.atac.mat &lt;- atac.mat[enhancers_genes_df[,&quot;peakies&quot;],]
+genes.DA.rna.mat &lt;- og.data[enhancers_genes_df[,&quot;genes&quot;],]</code></pre>
+<p>Get correlations between peaks and true RNA-seq data across all cells</p>
+<pre class="r"><code>row_by_row_cor &lt;- function(A, B){
+  p1 &lt;- dim(A)[1]
+  p2 &lt;- dim(B)[1]
+  stopifnot(p1 == p2)
+  rr_cors &lt;- rep(0, p1)
+  for(i in 1:p1){
+    x &lt;- A[i,]
+    y &lt;- B[i,]
+    if(stats::sd(x) &gt; 0 &amp; stats::sd(y) &gt; 0){
+      rr_cors[i] &lt;- cor(x, y)
+    }
+    else{
+      rr_cors[i] &lt;- NA
+    }
+  }
+  return(rr_cors)
+}</code></pre>
+<pre class="r"><code>gene_enhancer_cor &lt;- row_by_row_cor(A = DA.atac.mat, B = genes.DA.rna.mat)</code></pre>
+<p>Get correlations between peaks and imputed/transferred RNA-seq data across all cells</p>
+<pre class="r"><code>genes.DA.imputed.rna.mat &lt;- imputed.rna.mat[enhancers_genes_df[,&quot;genes&quot;],]
+gene_enhancer_impt_cor &lt;- row_by_row_cor(A = DA.atac.mat, B = genes.DA.imputed.rna.mat)</code></pre>
+<p>Compare correlations across 62,160 peak-gene pairs</p>
+<pre class="r"><code>plot(gene_enhancer_cor, gene_enhancer_impt_cor, xlab=&#39;Peak-Gene Pearson (True RNA)&#39;, ylab=&#39;Peak-Gene Pearson (Transferred RNA)&#39;, pch=16)
+abline(a = 0, b = 1, col=&#39;red&#39;)</code></pre>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-24-1.png" width="672" /></p>
+</div>
+</div>
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.header').parent('thead').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

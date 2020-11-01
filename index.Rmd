@@ -1,0 +1,16 @@
+---
+title: "Integration Project"
+theme: flatly
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Introduction
+
+Here you will find links to analyses of the heart atlas project.
+
+* [Donor 03231](integration_workflow.html)
+
