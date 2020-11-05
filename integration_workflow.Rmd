@@ -27,7 +27,7 @@ LegendOff <- function(){
 
 ```
 
-### Introduction
+## Introduction
 
 I obtained paired scRNA-seq and scATAC-seq from 10X Genomics for paired [PBMC cells](https://support.10xgenomics.com/single-cell-multiome-atac-gex/datasets/1.0.0/pbmc_unsorted_10k). I performed unsupervised clustering on the scRNA-seq data using marker genes outlined in the Seurat 3k PBMC tutorial. The cell-types are shown below.
 
@@ -43,7 +43,7 @@ p2 <- DimPlot(s.atac, label=T, group.by='clusters') + NoLegend() + ggtitle('scAT
 p1 + p2
 ```
 
-### Evaluating anchors
+## Evaluating anchors
 
 Using default parameters, I ran `FindIntegrationAnchors` from Seurat v3 on the scRNA-seq and scATAC-seq data above, and obtained 5658 anchor pairs. Below we evaluate how accurate these anchors are. 
 
@@ -182,7 +182,7 @@ og.data <- as.matrix(s.rna@assays$RNA@data)
 imputed.rna <- suppressMessages(TransferData(anchorset = anchors, refdata = og.data, weight.reduction = 'cca'))
 ```
 
-#### Correlations before and after imputations
+### Correlations before and after imputations
 
 ```{r}
 imputed.rna.mat <- as.matrix(imputed.rna@data)
@@ -307,7 +307,7 @@ genes.DA.imputed.rna.mat <- imputed.rna.mat[enhancers_genes_df[,"genes"],]
 gene_enhancer_impt_cor <- row_by_row_cor(A = DA.atac.mat, B = genes.DA.imputed.rna.mat)
 ```
 
-Compare correlations across 62,160 peak-gene pairs
+Compare correlations.
 
 ```{r}
 plot(gene_enhancer_cor, gene_enhancer_impt_cor, xlab='Peak-Gene Pearson (True RNA)', ylab='Peak-Gene Pearson (Transferred RNA)', pch=16)
