@@ -8,17 +8,34 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+```{r, echo=F}
 setwd('/project2/gca/aselewa/integration_benchmarks/')
+library(ggplot2)
 suppressMessages(source('R/seurat_integration.R'))
+
+ggClean <- function(){
+  theme_bw() + 
+    theme(text = element_text(size=18),
+          panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank(),
+          panel.background = element_rect(colour = "black", size=1))
+}
+
+LegendOff <- function(){
+  theme(legend.position = "none")
+}
+
 ```
+
+### Introduction
+
+I obtained paired scRNA-seq and scATAC-seq from 10X Genomics for paired [PBMC cells](https://support.10xgenomics.com/single-cell-multiome-atac-gex/datasets/1.0.0/pbmc_unsorted_10k). I performed unsupervised clustering on the scRNA-seq data using marker genes outlined in the Seurat 3k PBMC tutorial. The cell-types are shown below.
 
 ```{r}
-s.rna <- readRDS('data/rna_seurat.rds')
-s.atac <- readRDS('data/atac_seurat.rds')
-anchors <- readRDS('data/anchors_kanchor_5.rds')
+s.rna <- readRDS('data/Seurat/rna_seurat.rds')
+s.atac <- readRDS('data/Seurat/atac_seurat.rds')
+anchors <- readRDS('data/anchors/anchors_kanchor_5.rds')
 ```
-
 
 ```{r}
 p1 <- DimPlot(s.rna, label=T, group.by='clusters') + NoLegend() + ggtitle('scRNA-seq')
@@ -26,6 +43,9 @@ p2 <- DimPlot(s.atac, label=T, group.by='clusters') + NoLegend() + ggtitle('scAT
 p1 + p2
 ```
 
+### Evaluating anchors
+
+Using default parameters, I ran `FindIntegrationAnchors` from Seurat v3 on the scRNA-seq and scATAC-seq data above, and obtained 5658 anchor pairs. Below we evaluate how accurate these anchors are. 
 
 ```{r}
 cells1 <- anchors@anchors[,"cell1"]
@@ -71,12 +91,16 @@ boxplot(scores_disagree, scores_agree, names = c('Disagree','Agree'), ylab='Anch
 
 ## Label Transfer
 
+Having obtained anchors, we can perform label transfer from RNA to ATAC. Below I show the the ATAC UMAP with labels transferred from RNA. 
+
 ```{r}
-s.atac <- transfer_data(ATAC = s.atac, data = Idents(s.rna), anchors = anchors)
+s.atac <- suppressMessages(transfer_data(ATAC = s.atac, data = Idents(s.rna), anchors = anchors))
 p1 <- DimPlot(s.rna, label=T) + NoLegend() + ggtitle('scRNA-seq')
 p2 <- DimPlot(s.atac, label=T, group.by='RNA_IDENT') + NoLegend() + ggtitle('scATAC-seq')
 p1 + p2
 ```
+
+Because we know the actual cell-type label of ATAC cells (based on their paired RNA data), we can ask if the transferred label agrees with the actual label. 
 
 ```{r}
 cell_type_agree <- c(sum(s.atac$RNA_IDENT != s.atac$clusters), sum(s.atac$RNA_IDENT == s.atac$clusters))
@@ -90,19 +114,72 @@ barplot(cell_type_agree, ylab='ATAC Cells',xlab='Transferred Label Status', main
 boxplot(scores_agree, scores_disagree, names = c('Disagree','Agree'), ylab='Max Predicted Score', xlab='Transferred Label Status', main='ATAC Label Transfer Max Score')
 ```
 
+### Benchmarking label transfer
+
+Here we look at the performance of label transfer under different clustering resolutions. The benchmark procedure is summarized below:
+
+1. Generate clusters for each cell based on RNA alone
+2. Transfer label from RNA to ATAC in an unsupervised fashion
+3. Compare transfered label with the label generated in 1.
+
+We get this accuracy at various levels of clustering resolution.
+
+Furthermore, we tune 2 parameters:
+
+* k.anchor: the size of the neighborhood for finding mutual nearest neighbors. 
+* k.filter: filters anchors that are NOT within `k.filter` nearest neighbors of eachother in high dimensional space (gene space).
+
+The transfer label performs worse as the number of clusters is increased. Here the range of resolution implies 5 to 18 clusters.
 
 ```{r}
-hist(s.atac$PREDICTED_SCORE_MAX, main='Maximum Predicted Score',xlab='Score')
+lab.acc.list <- readRDS('data/transfer_label_benchmarks/label_transfer_accuracy.rds')
+res <- readRDS('data/transfer_label_benchmarks/resolutions.rds')
+
+lab.acc.smooth <- lapply(lab.acc.list, FUN = function(x){zoo::rollmean(x = x, k=3)})
+res <- res[1:length(lab.acc.smooth$`1`)]
+
+benchmark.df <- data.frame(lab.acc.smooth)
+colnames(benchmark.df) <- as.character(c(1,10,15,20,5))
+benchmark.df <- suppressMessages(reshape2::melt(benchmark.df))
+colnames(benchmark.df) <- c("k.anchor","TransferLabelAcurracy")
+benchmark.df$res <- rep(res, length(lab.acc.smooth))
 ```
 
+```{r}
+p1 <- ggplot(benchmark.df, aes(x=res, y=TransferLabelAcurracy, color=k.anchor)) + geom_point() + geom_line() + ggClean() + xlab('Resolution') + ylab('Transfer Label Accuracy') + ggtitle('kanchor benchmark')
+```
+
+```{r}
+lab.acc.list <- readRDS('data/transfer_label_benchmarks/label_transfer_accuracy_kfilter.rds')
+res <- readRDS('data/transfer_label_benchmarks/resolutions.rds')
+
+lab.acc.smooth <- lapply(lab.acc.list, FUN = function(x){zoo::rollmean(x = x, k=3)})
+res <- res[1:length(lab.acc.smooth$`10`)]
+
+benchmark.df <- data.frame(lab.acc.smooth)
+colnames(benchmark.df) <- as.character(c(10,100,200,500,Inf))
+benchmark.df <- suppressMessages(reshape2::melt(benchmark.df))
+colnames(benchmark.df) <- c("k.filter","TransferLabelAcurracy")
+benchmark.df$res <- rep(res, length(lab.acc.smooth))
+```
+
+```{r}
+p2 <- ggplot(benchmark.df, aes(x=res, y=TransferLabelAcurracy, color=k.filter)) + geom_point() + geom_line() + ggClean() + xlab('Resolution') + ylab('Transfer Label Accuracy') + ggtitle('kfilter benchmark')
+```
+
+```{r, fig.width=10, fig.height=4}
+p1 + p2
+```
+
+Based on the above results, it seems that the metric is fairly robust to the `k.anchor` parameter. Furthermore, it seems that filtering anchors according to high dimension generally not a good idea because turning off the `k.filter` by setting it to `Inf` results in using all anchors and achieves higher accuracy. 
 
 ## RNA Transfer
 
-Transfer counts
+We can also transfer gene expression from RNA to ATAC. 
 
 ```{r}
 og.data <- as.matrix(s.rna@assays$RNA@data)
-imputed.rna <- TransferData(anchorset = anchors, refdata = og.data, weight.reduction = 'cca')
+imputed.rna <- suppressMessages(TransferData(anchorset = anchors, refdata = og.data, weight.reduction = 'cca'))
 ```
 
 #### Correlations before and after imputations
@@ -170,15 +247,15 @@ imputed.rna.mat <- as.matrix(imputed.rna@data)
 og.data <- as.matrix(s.rna@assays$RNA@data)
 ```
 
-Here, we find all genes within 10kb of all peaks in the scATAC-seq data (~62k peaks)
+Here, we find all genes within 100kb of all peaks in the scATAC-seq data (~62k peaks)
 
 ```{r}
 annotations <- suppressWarnings(suppressMessages(GetGRangesFromEnsDb(ensdb = EnsDb.Hsapiens.v86::EnsDb.Hsapiens.v86, verbose = F)))
-seqlevelsStyle(annotations) <- "UCSC"
+ensembldb::seqlevelsStyle(annotations) <- "UCSC"
 exon_annotations <- annotations[annotations$type=="exon",]
 
 DA_peaks_GR <- granges(s.atac)
-DA_peaks_genes <- plyranges::join_overlap_left(x = DA_peaks_GR, y = exon_annotations, maxgap=10000, minoverlap=0)
+DA_peaks_genes <- plyranges::join_overlap_left(x = DA_peaks_GR, y = exon_annotations, maxgap=100000, minoverlap=0)
 peakies <- Signac::GRangesToString(DA_peaks_genes)
 genes <- DA_peaks_genes$gene_name
 comb <- paste0(peakies, '-', genes)

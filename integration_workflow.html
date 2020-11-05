@@ -24,6 +24,7 @@
 <link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
 <script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
 <script src="site_libs/navigation-1.1/tabsets.js"></script>
+<script src="site_libs/navigation-1.1/codefolding.js"></script>
 <link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
 <script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
 
@@ -249,6 +250,9 @@ $(document).ready(function () {
 </style>
 
 <!-- code folding -->
+<style type="text/css">
+.code-folding-btn { margin-bottom: 4px; }
+</style>
 
 
 
@@ -361,6 +365,14 @@ div.tocify {
 
 <div class="fluid-row" id="header">
 
+<div class="btn-group pull-right">
+<button type="button" class="btn btn-default btn-xs dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span>Code</span> <span class="caret"></span></button>
+<ul class="dropdown-menu" style="min-width: 50px;">
+<li><a id="rmd-show-all-code" href="#">Show All Code</a></li>
+<li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li>
+</ul>
+</div>
+
 
 
 <h1 class="title toc-ignore">Assessing Seurat Integration</h1>
@@ -369,15 +381,20 @@ div.tocify {
 </div>
 
 
-<pre class="r"><code>setwd(&#39;/project2/gca/aselewa/integration_benchmarks/&#39;)
-suppressMessages(source(&#39;seurat_integration.R&#39;))</code></pre>
-<pre class="r"><code>s.rna &lt;- readRDS(&#39;data/rna_seurat.rds&#39;)
-s.atac &lt;- readRDS(&#39;data/atac_seurat.rds&#39;)
-anchors &lt;- readRDS(&#39;data/anchors_kanchor_5.rds&#39;)</code></pre>
+<div id="introduction" class="section level3">
+<h3>Introduction</h3>
+<p>I obtained paired scRNA-seq and scATAC-seq from 10X Genomics for paired <a href="https://support.10xgenomics.com/single-cell-multiome-atac-gex/datasets/1.0.0/pbmc_unsorted_10k">PBMC cells</a>. I performed unsupervised clustering on the scRNA-seq data using marker genes outlined in the Seurat 3k PBMC tutorial. The cell-types are shown below.</p>
+<pre class="r"><code>s.rna &lt;- readRDS(&#39;data/Seurat/rna_seurat.rds&#39;)
+s.atac &lt;- readRDS(&#39;data/Seurat/atac_seurat.rds&#39;)
+anchors &lt;- readRDS(&#39;data/anchors/anchors_kanchor_5.rds&#39;)</code></pre>
 <pre class="r"><code>p1 &lt;- DimPlot(s.rna, label=T, group.by=&#39;clusters&#39;) + NoLegend() + ggtitle(&#39;scRNA-seq&#39;)
 p2 &lt;- DimPlot(s.atac, label=T, group.by=&#39;clusters&#39;) + NoLegend() + ggtitle(&#39;scATAC-seq&#39;)
 p1 + p2</code></pre>
 <p><img src="integration_workflow_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
+</div>
+<div id="evaluating-anchors" class="section level3">
+<h3>Evaluating anchors</h3>
+<p>Using default parameters, I ran <code>FindIntegrationAnchors</code> from Seurat v3 on the scRNA-seq and scATAC-seq data above, and obtained 5658 anchor pairs. Below we evaluate how accurate these anchors are.</p>
 <pre class="r"><code>cells1 &lt;- anchors@anchors[,&quot;cell1&quot;]
 cells2 &lt;- anchors@anchors[,&quot;cell2&quot;]</code></pre>
 <pre class="r"><code>num_cells &lt;- c(length(unique(cells1)), length(unique(cells2)))/length(Cells(s.rna))
@@ -407,16 +424,16 @@ par(mfrow=c(1,2))
 barplot(cell_type_agree, ylab=&#39;Anchors&#39;,xlab=&#39;Cell Type Assignment&#39;, main=&#39;Anchors Cluster Agreement&#39;)
 boxplot(scores_disagree, scores_agree, names = c(&#39;Disagree&#39;,&#39;Agree&#39;), ylab=&#39;Anchor Score&#39;, main=&#39;Anchor Scores&#39;)</code></pre>
 <p><img src="integration_workflow_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
+</div>
 <div id="label-transfer" class="section level2">
 <h2>Label Transfer</h2>
-<pre class="r"><code>s.atac &lt;- transfer_data(ATAC = s.atac, data = Idents(s.rna), anchors = anchors)</code></pre>
-<pre><code>## Finding integration vectors</code></pre>
-<pre><code>## Finding integration vector weights</code></pre>
-<pre><code>## Predicting cell labels</code></pre>
-<pre class="r"><code>p1 &lt;- DimPlot(s.rna, label=T) + NoLegend() + ggtitle(&#39;scRNA-seq&#39;)
+<p>Having obtained anchors, we can perform label transfer from RNA to ATAC. Below I show the the ATAC UMAP with labels transferred from RNA.</p>
+<pre class="r"><code>s.atac &lt;- suppressMessages(transfer_data(ATAC = s.atac, data = Idents(s.rna), anchors = anchors))
+p1 &lt;- DimPlot(s.rna, label=T) + NoLegend() + ggtitle(&#39;scRNA-seq&#39;)
 p2 &lt;- DimPlot(s.atac, label=T, group.by=&#39;RNA_IDENT&#39;) + NoLegend() + ggtitle(&#39;scATAC-seq&#39;)
 p1 + p2</code></pre>
 <p><img src="integration_workflow_files/figure-html/unnamed-chunk-9-1.png" width="672" /></p>
+<p>Because we know the actual cell-type label of ATAC cells (based on their paired RNA data), we can ask if the transferred label agrees with the actual label.</p>
 <pre class="r"><code>cell_type_agree &lt;- c(sum(s.atac$RNA_IDENT != s.atac$clusters), sum(s.atac$RNA_IDENT == s.atac$clusters))
 names(cell_type_agree) &lt;- c(&#39;Disagree&#39;, &#39;Agree&#39;)
 
@@ -427,17 +444,55 @@ par(mfrow=c(1,2))
 barplot(cell_type_agree, ylab=&#39;ATAC Cells&#39;,xlab=&#39;Transferred Label Status&#39;, main=&#39;ATAC Label Transfer&#39;)
 boxplot(scores_agree, scores_disagree, names = c(&#39;Disagree&#39;,&#39;Agree&#39;), ylab=&#39;Max Predicted Score&#39;, xlab=&#39;Transferred Label Status&#39;, main=&#39;ATAC Label Transfer Max Score&#39;)</code></pre>
 <p><img src="integration_workflow_files/figure-html/unnamed-chunk-10-1.png" width="672" /></p>
-<pre class="r"><code>hist(s.atac$PREDICTED_SCORE_MAX, main=&#39;Maximum Predicted Score&#39;,xlab=&#39;Score&#39;)</code></pre>
-<p><img src="integration_workflow_files/figure-html/unnamed-chunk-11-1.png" width="672" /></p>
+<div id="benchmarking-label-transfer" class="section level3">
+<h3>Benchmarking label transfer</h3>
+<p>Here we look at the performance of label transfer under different clustering resolutions. The benchmark procedure is summarized below:</p>
+<ol style="list-style-type: decimal">
+<li>Generate clusters for each cell based on RNA alone</li>
+<li>Transfer label from RNA to ATAC in an unsupervised fashion</li>
+<li>Compare transfered label with the label generated in 1.</li>
+</ol>
+<p>We get this accuracy at various levels of clustering resolution.</p>
+<p>Furthermore, we tune 2 parameters:</p>
+<ul>
+<li>k.anchor: the size of the neighborhood for finding mutual nearest neighbors.</li>
+<li>k.filter: filters anchors that are NOT within <code>k.filter</code> nearest neighbors of eachother in high dimensional space (gene space).</li>
+</ul>
+<p>The transfer label performs worse as the number of clusters is increased. Here the range of resolution implies 5 to 18 clusters.</p>
+<pre class="r"><code>lab.acc.list &lt;- readRDS(&#39;data/transfer_label_benchmarks/label_transfer_accuracy.rds&#39;)
+res &lt;- readRDS(&#39;data/transfer_label_benchmarks/resolutions.rds&#39;)
+
+lab.acc.smooth &lt;- lapply(lab.acc.list, FUN = function(x){zoo::rollmean(x = x, k=3)})
+res &lt;- res[1:length(lab.acc.smooth$`1`)]
+
+benchmark.df &lt;- data.frame(lab.acc.smooth)
+colnames(benchmark.df) &lt;- as.character(c(1,10,15,20,5))
+benchmark.df &lt;- suppressMessages(reshape2::melt(benchmark.df))
+colnames(benchmark.df) &lt;- c(&quot;k.anchor&quot;,&quot;TransferLabelAcurracy&quot;)
+benchmark.df$res &lt;- rep(res, length(lab.acc.smooth))</code></pre>
+<pre class="r"><code>p1 &lt;- ggplot(benchmark.df, aes(x=res, y=TransferLabelAcurracy, color=k.anchor)) + geom_point() + geom_line() + ggClean() + xlab(&#39;Resolution&#39;) + ylab(&#39;Transfer Label Accuracy&#39;) + ggtitle(&#39;kanchor benchmark&#39;)</code></pre>
+<pre class="r"><code>lab.acc.list &lt;- readRDS(&#39;data/transfer_label_benchmarks/label_transfer_accuracy_kfilter.rds&#39;)
+res &lt;- readRDS(&#39;data/transfer_label_benchmarks/resolutions.rds&#39;)
+
+lab.acc.smooth &lt;- lapply(lab.acc.list, FUN = function(x){zoo::rollmean(x = x, k=3)})
+res &lt;- res[1:length(lab.acc.smooth$`10`)]
+
+benchmark.df &lt;- data.frame(lab.acc.smooth)
+colnames(benchmark.df) &lt;- as.character(c(10,100,200,500,Inf))
+benchmark.df &lt;- suppressMessages(reshape2::melt(benchmark.df))
+colnames(benchmark.df) &lt;- c(&quot;k.filter&quot;,&quot;TransferLabelAcurracy&quot;)
+benchmark.df$res &lt;- rep(res, length(lab.acc.smooth))</code></pre>
+<pre class="r"><code>p2 &lt;- ggplot(benchmark.df, aes(x=res, y=TransferLabelAcurracy, color=k.filter)) + geom_point() + geom_line() + ggClean() + xlab(&#39;Resolution&#39;) + ylab(&#39;Transfer Label Accuracy&#39;) + ggtitle(&#39;kfilter benchmark&#39;)</code></pre>
+<pre class="r"><code>p1 + p2</code></pre>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-15-1.png" width="960" /></p>
+<p>Based on the above results, it seems that the metric is fairly robust to the <code>k.anchor</code> parameter. Furthermore, it seems that filtering anchors according to high dimension generally not a good idea because turning off the <code>k.filter</code> by setting it to <code>Inf</code> results in using all anchors and achieves higher accuracy.</p>
+</div>
 </div>
 <div id="rna-transfer" class="section level2">
 <h2>RNA Transfer</h2>
-<p>Transfer counts</p>
+<p>We can also transfer gene expression from RNA to ATAC.</p>
 <pre class="r"><code>og.data &lt;- as.matrix(s.rna@assays$RNA@data)
-imputed.rna &lt;- TransferData(anchorset = anchors, refdata = og.data, weight.reduction = &#39;cca&#39;)</code></pre>
-<pre><code>## Finding integration vectors</code></pre>
-<pre><code>## Finding integration vector weights</code></pre>
-<pre><code>## Transfering 22877 features onto reference data</code></pre>
+imputed.rna &lt;- suppressMessages(TransferData(anchorset = anchors, refdata = og.data, weight.reduction = &#39;cca&#39;))</code></pre>
 <div id="correlations-before-and-after-imputations" class="section level4">
 <h4>Correlations before and after imputations</h4>
 <pre class="r"><code>imputed.rna.mat &lt;- as.matrix(imputed.rna@data)
@@ -461,7 +516,7 @@ for(i in 1:n){
 <pre class="r"><code>par(mfrow=c(1,2))
 hist(cell.cor, xlab=&#39;Pearson&#39;, main=&#39;Cells&#39;)
 hist(gene.cor, xlab=&#39;Pearson&#39;, main=&#39;Top 100 Genes&#39;)</code></pre>
-<p><img src="integration_workflow_files/figure-html/unnamed-chunk-15-1.png" width="672" /></p>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-19-1.png" width="672" /></p>
 </div>
 <div id="co-expression-of-pair-markers" class="section level4">
 <h4>Co-expression of pair markers</h4>
@@ -480,20 +535,20 @@ for(i in 1:k){
 <pre class="r"><code>plot(og.cors, imputed.cors, pch=16, xlab=&#39;Original Data Pearson&#39;, ylab=&#39;Transfer Data Pearson&#39;, xlim = c(-0.2,1), ylim=c(-0.2,1))
 text(x = og.cors, y = imputed.cors, labels = text.lab, pos = 4)
 abline(a = 0, b = 1, col=&#39;red&#39;)</code></pre>
-<p><img src="integration_workflow_files/figure-html/unnamed-chunk-17-1.png" width="672" /></p>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-21-1.png" width="672" /></p>
 <p>As we can see, co-expressed genes remain co-expressed in the transferred RNA.</p>
 </div>
 <div id="enhancergene-correlations" class="section level4">
 <h4>Enhancer/gene correlations</h4>
 <pre class="r"><code>imputed.rna.mat &lt;- as.matrix(imputed.rna@data)
 og.data &lt;- as.matrix(s.rna@assays$RNA@data)</code></pre>
-<p>Here, we find all genes within 10kb of all peaks in the scATAC-seq data (~62k peaks)</p>
+<p>Here, we find all genes within 100kb of all peaks in the scATAC-seq data (~62k peaks)</p>
 <pre class="r"><code>annotations &lt;- suppressWarnings(suppressMessages(GetGRangesFromEnsDb(ensdb = EnsDb.Hsapiens.v86::EnsDb.Hsapiens.v86, verbose = F)))
-seqlevelsStyle(annotations) &lt;- &quot;UCSC&quot;
+ensembldb::seqlevelsStyle(annotations) &lt;- &quot;UCSC&quot;
 exon_annotations &lt;- annotations[annotations$type==&quot;exon&quot;,]
 
 DA_peaks_GR &lt;- granges(s.atac)
-DA_peaks_genes &lt;- plyranges::join_overlap_left(x = DA_peaks_GR, y = exon_annotations, maxgap=10000, minoverlap=0)</code></pre>
+DA_peaks_genes &lt;- plyranges::join_overlap_left(x = DA_peaks_GR, y = exon_annotations, maxgap=100000, minoverlap=0)</code></pre>
 <pre><code>## Warning in .Seqinfo.mergexy(x, y): Each of the 2 combined objects has sequence levels not in the other:
 ##   - in &#39;x&#39;: GL000194.1, GL000195.1, GL000205.2, GL000219.1, KI270713.1, KI270726.1, KI270727.1, KI270728.1
 ##   - in &#39;y&#39;: chrM
@@ -536,7 +591,7 @@ gene_enhancer_impt_cor &lt;- row_by_row_cor(A = DA.atac.mat, B = genes.DA.impute
 <p>Compare correlations across 62,160 peak-gene pairs</p>
 <pre class="r"><code>plot(gene_enhancer_cor, gene_enhancer_impt_cor, xlab=&#39;Peak-Gene Pearson (True RNA)&#39;, ylab=&#39;Peak-Gene Pearson (Transferred RNA)&#39;, pch=16)
 abline(a = 0, b = 1, col=&#39;red&#39;)</code></pre>
-<p><img src="integration_workflow_files/figure-html/unnamed-chunk-24-1.png" width="672" /></p>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-28-1.png" width="672" /></p>
 </div>
 </div>
 
@@ -575,6 +630,11 @@ $(document).ready(function () {
 </script>
 
 <!-- code folding -->
+<script>
+$(document).ready(function () {
+  window.initializeCodeFolding("hide" === "show");
+});
+</script>
 
 <script>
 $(document).ready(function ()  {

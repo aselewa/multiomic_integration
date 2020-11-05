@@ -56,10 +56,18 @@ s.rna <- RenameIdents(s.rna, '0' = 'CD14+ Monocytes','1'='Naive CD4+ T', '2'='Me
 s.rna$clusters <- factor(as.character(s.rna@active.ident), levels = sort(unique(as.character(s.rna@active.ident))))
 s.atac$clusters <- factor(as.character(s.atac@active.ident), levels = sort(unique(as.character(s.atac@active.ident))))
 
+# Get anchors for several values of k anchor and k filter
+
 k.anchors <- c(1, 5, 10, 15, 20, 50)
-for(k.anchor in k.anchors){
+for(k.anchor in k.filters){
   anchors <- get_integration_anchors(RNA = s.rna, ATAC = s.atac, k.anchor = k.anchor)
-  saveRDS(anchors, paste0('data/anchors_kanchor_',k.anchor,'.rds'))
+  saveRDS(anchors, paste0('data/anchors/anchors_kfilter_',k.anchor,'.rds'))
+}
+
+k.filters <- c(10, 100, 200, 500, Inf)
+for(k.filter in k.filters){
+  anchors <- get_integration_anchors(RNA = s.rna, ATAC = s.atac, k.filter = k.filter)
+  saveRDS(anchors, paste0('data/anchors/anchors_kfilter_',k.filter,'.rds'))
 }
 
 saveRDS(s.rna, 'data/rna_seurat.rds')
