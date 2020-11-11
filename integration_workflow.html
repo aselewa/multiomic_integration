@@ -390,7 +390,7 @@ anchors &lt;- readRDS(&#39;data/anchors/anchors_kanchor_5.rds&#39;)</code></pre>
 <pre class="r"><code>p1 &lt;- DimPlot(s.rna, label=T, group.by=&#39;clusters&#39;) + NoLegend() + ggtitle(&#39;scRNA-seq&#39;)
 p2 &lt;- DimPlot(s.atac, label=T, group.by=&#39;clusters&#39;) + NoLegend() + ggtitle(&#39;scATAC-seq&#39;)
 p1 + p2</code></pre>
-<p><img src="integration_workflow_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
 </div>
 <div id="evaluating-anchors" class="section level2">
 <h2>Evaluating anchors</h2>
@@ -400,18 +400,18 @@ cells2 &lt;- anchors@anchors[,&quot;cell2&quot;]</code></pre>
 <pre class="r"><code>num_cells &lt;- c(length(unique(cells1)), length(unique(cells2)))/length(Cells(s.rna))
 names(num_cells) &lt;- c(&#39;RNA&#39;, &#39;ATAC&#39;)
 barplot(num_cells, ylab=&#39;Proportion of Cells&#39;,xlab=&#39;Assay&#39;, main=&#39;Contribution to Anchors&#39;)</code></pre>
-<p><img src="integration_workflow_files/figure-html/unnamed-chunk-10-1.png" width="672" /></p>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-5-1.png" width="672" /></p>
 <pre class="r"><code>freq_cells1 &lt;- table(cells1)
 hist_cells1 &lt;- rep(0, max(freq_cells1))
 for(i in 1:max(freq_cells1)){
   hist_cells1[i] &lt;- sum(freq_cells1==i)
 }
 barplot(hist_cells1, names.arg = 1:max(freq_cells1), ylab=&#39;Number of Cells&#39;, xlab=&#39;Frequency&#39;, main=&#39;Frequency of cells used in Anchors (RNA)&#39;)</code></pre>
-<p><img src="integration_workflow_files/figure-html/unnamed-chunk-11-1.png" width="672" /></p>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
 <pre class="r"><code>same_cell &lt;- c(sum(cells1 == cells2), sum(cells1 != cells2))
 names(same_cell) &lt;- c(&#39;same cell&#39;, &#39;different cell&#39;)
 barplot(same_cell, ylab=&#39;Anchors&#39;,xlab=&#39;Anchor Pairs&#39;, main=&#39;Anchor Pair Correspondence&#39;)</code></pre>
-<p><img src="integration_workflow_files/figure-html/unnamed-chunk-12-1.png" width="672" /></p>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
 <pre class="r"><code>cells1_clust &lt;- as.character(s.rna$clusters[cells1])
 cells2_clust &lt;- as.character(s.atac$clusters[cells2])
 cell_type_agree &lt;- c(sum(cells1_clust != cells2_clust), sum(cells1_clust == cells2_clust))
@@ -423,16 +423,16 @@ scores_disagree &lt;- anchors@anchors[cells1_clust != cells2_clust, &quot;score&
 par(mfrow=c(1,2))
 barplot(cell_type_agree, ylab=&#39;Anchors&#39;,xlab=&#39;Cell Type Assignment&#39;, main=&#39;Anchors Cluster Agreement&#39;)
 boxplot(scores_disagree, scores_agree, names = c(&#39;Disagree&#39;,&#39;Agree&#39;), ylab=&#39;Anchor Score&#39;, main=&#39;Anchor Scores&#39;)</code></pre>
-<p><img src="integration_workflow_files/figure-html/unnamed-chunk-13-1.png" width="672" /></p>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
 </div>
 <div id="label-transfer" class="section level2">
 <h2>Label Transfer</h2>
 <p>Having obtained anchors, we can perform label transfer from RNA to ATAC. Below I show the the ATAC UMAP with labels transferred from RNA.</p>
 <pre class="r"><code>s.atac &lt;- suppressMessages(transfer_data(ATAC = s.atac, data = s.rna$clusters, anchors = anchors))
-p1 &lt;- DimPlot(s.rna, label=T) + NoLegend() + ggtitle(&#39;scRNA-seq&#39;)
+p1 &lt;- DimPlot(s.rna, label=T, group.by=&#39;clusters&#39;) + NoLegend() + ggtitle(&#39;scRNA-seq&#39;)
 p2 &lt;- DimPlot(s.atac, label=T, group.by=&#39;RNA_IDENT&#39;) + NoLegend() + ggtitle(&#39;scATAC-seq&#39;)
 p1 + p2</code></pre>
-<p><img src="integration_workflow_files/figure-html/unnamed-chunk-14-1.png" width="672" /></p>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-9-1.png" width="672" /></p>
 <p>Because we know the actual cell-type label of ATAC cells (based on their paired RNA data), we can ask if the transferred label agrees with the actual label.</p>
 <pre class="r"><code>cell_type_agree &lt;- c(sum(s.atac$RNA_IDENT != s.atac$clusters), sum(s.atac$RNA_IDENT == s.atac$clusters))
 names(cell_type_agree) &lt;- c(&#39;Disagree&#39;, &#39;Agree&#39;)
@@ -443,7 +443,7 @@ scores_disagree &lt;- s.atac$PREDICTED_SCORE_MAX[s.atac$RNA_IDENT == s.atac$clus
 par(mfrow=c(1,2))
 barplot(cell_type_agree, ylab=&#39;ATAC Cells&#39;,xlab=&#39;Transferred Label Status&#39;, main=&#39;ATAC Label Transfer&#39;)
 boxplot(scores_agree, scores_disagree, names = c(&#39;Disagree&#39;,&#39;Agree&#39;), ylab=&#39;Max Predicted Score&#39;, xlab=&#39;Transferred Label Status&#39;, main=&#39;ATAC Label Transfer Max Score&#39;)</code></pre>
-<p><img src="integration_workflow_files/figure-html/unnamed-chunk-15-1.png" width="672" /></p>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-10-1.png" width="672" /></p>
 <div id="benchmarking-label-transfer" class="section level3">
 <h3>Benchmarking label transfer</h3>
 <p>Here we look at the performance of label transfer under different clustering resolutions. The benchmark procedure is summarized below:</p>
@@ -484,7 +484,7 @@ colnames(benchmark.df) &lt;- c(&quot;k.filter&quot;,&quot;TransferLabelAcurracy&
 benchmark.df$res &lt;- rep(res, length(lab.acc.smooth))</code></pre>
 <pre class="r"><code>p2 &lt;- ggplot(benchmark.df, aes(x=res, y=TransferLabelAcurracy, color=k.filter)) + geom_point() + geom_line() + ggClean() + xlab(&#39;Resolution&#39;) + ylab(&#39;Transfer Label Accuracy&#39;) + ggtitle(&#39;kfilter benchmark&#39;)</code></pre>
 <pre class="r"><code>p1 + p2</code></pre>
-<p><img src="integration_workflow_files/figure-html/unnamed-chunk-20-1.png" width="960" /></p>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-15-1.png" width="960" /></p>
 <p>Based on the above results, it seems that the metric is fairly robust to the <code>k.anchor</code> parameter. Furthermore, it seems that filtering anchors according to high dimension generally not a good idea because turning off the <code>k.filter</code> by setting it to <code>Inf</code> results in using all anchors and achieves higher accuracy.</p>
 </div>
 </div>
@@ -517,7 +517,7 @@ for(i in 1:n){
 <pre class="r"><code>par(mfrow=c(1,2))
 hist(cell.cor, xlab=&#39;Pearson&#39;, main=&#39;Cells&#39;)
 hist(gene.cor, xlab=&#39;Pearson&#39;, main=&#39;Top 100 Genes&#39;)</code></pre>
-<p><img src="integration_workflow_files/figure-html/unnamed-chunk-24-1.png" width="672" /></p>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-19-1.png" width="672" /></p>
 </div>
 <div id="peak-gene-correlations-in-pseudo-cells" class="section level3">
 <h3>Peak-gene correlations in pseudo-cells</h3>
@@ -525,8 +525,8 @@ hist(gene.cor, xlab=&#39;Pearson&#39;, main=&#39;Top 100 Genes&#39;)</code></pre
 <pre class="r"><code>satac_agg &lt;- readRDS(&#39;data/Seurat/agg_atac_seurat.rds&#39;)
 srna_agg &lt;- readRDS(&#39;data/Seurat/agg_rna_seurat.rds&#39;)</code></pre>
 <p>Here each each dot represents ~28 cells. The pseudo-cells are labeled by the labels of their RNA counterpart. As we can see, the pseudo-cells cluster together.</p>
-<pre class="r"><code>DimPlot(satac_agg, group.by=&#39;clusters&#39;, label=T) + LegendOff() + ggtitle(&#39;Pseuo-cell ATAC-seq&#39;)</code></pre>
-<p><img src="integration_workflow_files/figure-html/unnamed-chunk-26-1.png" width="672" /></p>
+<pre class="r"><code>DimPlot(satac_agg, group.by=&#39;clusters&#39;, label=T) + LegendOff() + ggtitle(&#39;Pseudo-cell ATAC-seq&#39;)</code></pre>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-21-1.png" width="672" /></p>
 <p>Lets find every gene within 100kb of each peak.</p>
 <pre class="r"><code>annotations &lt;- suppressWarnings(suppressMessages(GetGRangesFromEnsDb(ensdb = EnsDb.Hsapiens.v86::EnsDb.Hsapiens.v86, verbose = F)))
 ensembldb::seqlevelsStyle(annotations) &lt;- &quot;UCSC&quot;
@@ -601,7 +601,7 @@ get_density &lt;- function(x, y, ...) {
 plot.df$density &lt;- get_density(plot.df$imputed_cor, plot.df$true_cor)
 
 ggplot(plot.df, aes(x=imputed_cor, y=true_cor, color=density)) + geom_point() + ggtitle(&#39;Gene-Peak Correlation with Transfered RNA&#39;) + xlab(&#39;Pearson (imputed)&#39;) + ylab(&#39;Pearson (original)&#39;) + geom_abline(slope = 1, color=&quot;red&quot;, linetype=&quot;dashed&quot;) + ggClean() + scale_color_viridis()</code></pre>
-<p><img src="integration_workflow_files/figure-html/unnamed-chunk-34-1.png" width="672" /></p>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-29-1.png" width="672" /></p>
 </div>
 <div id="precision-recall-of-gene-peaks-detected" class="section level3">
 <h3>Precision-recall of gene-peaks detected</h3>
@@ -622,7 +622,7 @@ for(i in 1:length(cors)){
 }</code></pre>
 <pre class="r"><code>re.pre.df &lt;- data.frame(recall=recall, precision=precision, pearson=cors)
 ggplot(re.pre.df, aes(x=precision, y = recall, color=pearson)) + geom_point() + geom_line() + ggClean()</code></pre>
-<p><img src="integration_workflow_files/figure-html/unnamed-chunk-36-1.png" width="672" /></p>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-31-1.png" width="672" /></p>
 </div>
 </div>
 

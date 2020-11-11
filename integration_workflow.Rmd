@@ -97,7 +97,7 @@ Having obtained anchors, we can perform label transfer from RNA to ATAC. Below I
 
 ```{r}
 s.atac <- suppressMessages(transfer_data(ATAC = s.atac, data = s.rna$clusters, anchors = anchors))
-p1 <- DimPlot(s.rna, label=T) + NoLegend() + ggtitle('scRNA-seq')
+p1 <- DimPlot(s.rna, label=T, group.by='clusters') + NoLegend() + ggtitle('scRNA-seq')
 p2 <- DimPlot(s.atac, label=T, group.by='RNA_IDENT') + NoLegend() + ggtitle('scATAC-seq')
 p1 + p2
 ```
@@ -230,7 +230,7 @@ srna_agg <- readRDS('data/Seurat/agg_rna_seurat.rds')
 Here each each dot represents ~28 cells. The pseudo-cells are labeled by the labels of their RNA counterpart. As we can see, the pseudo-cells cluster together. 
 
 ```{r}
-DimPlot(satac_agg, group.by='clusters', label=T) + LegendOff() + ggtitle('Pseuo-cell ATAC-seq')
+DimPlot(satac_agg, group.by='clusters', label=T) + LegendOff() + ggtitle('Pseudo-cell ATAC-seq')
 ```
 
 Lets find every gene within 100kb of each peak.
