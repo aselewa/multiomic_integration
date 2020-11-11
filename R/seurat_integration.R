@@ -19,7 +19,8 @@ get_integration_anchors <- function(RNA, ATAC, k.anchor = 5, k.filter = 200, k.s
                                           k.anchor = k.anchor,
                                           k.filter = k.filter, 
                                           k.score = k.score, 
-                                          normalization.method = "LogNormalize")
+                                          normalization.method = "LogNormalize",
+                                          max.features = 2000)
   
   return(transfer.anchors)
   

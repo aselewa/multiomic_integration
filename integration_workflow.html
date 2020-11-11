@@ -428,7 +428,7 @@ boxplot(scores_disagree, scores_agree, names = c(&#39;Disagree&#39;,&#39;Agree&#
 <div id="label-transfer" class="section level2">
 <h2>Label Transfer</h2>
 <p>Having obtained anchors, we can perform label transfer from RNA to ATAC. Below I show the the ATAC UMAP with labels transferred from RNA.</p>
-<pre class="r"><code>s.atac &lt;- suppressMessages(transfer_data(ATAC = s.atac, data = Idents(s.rna), anchors = anchors))
+<pre class="r"><code>s.atac &lt;- suppressMessages(transfer_data(ATAC = s.atac, data = s.rna$clusters, anchors = anchors))
 p1 &lt;- DimPlot(s.rna, label=T) + NoLegend() + ggtitle(&#39;scRNA-seq&#39;)
 p2 &lt;- DimPlot(s.atac, label=T, group.by=&#39;RNA_IDENT&#39;) + NoLegend() + ggtitle(&#39;scATAC-seq&#39;)
 p1 + p2</code></pre>
@@ -517,36 +517,20 @@ for(i in 1:n){
 hist(cell.cor, xlab=&#39;Pearson&#39;, main=&#39;Cells&#39;)
 hist(gene.cor, xlab=&#39;Pearson&#39;, main=&#39;Top 100 Genes&#39;)</code></pre>
 <p><img src="integration_workflow_files/figure-html/unnamed-chunk-19-1.png" width="672" /></p>
-<div id="co-expression-of-pair-markers" class="section level4">
-<h4>Co-expression of pair markers</h4>
-<p>Below we check that co-expressed marker genes remain co-expressed in the imputed data</p>
-<pre class="r"><code>gene.1 &lt;- c(&quot;IL7R&quot;,&quot;IL7R&quot;,&quot;CD14&quot;,&quot;FCGR3A&quot;,&quot;FCER1A&quot;,&quot;MS4A1&quot;)
-gene.2 &lt;- c(&quot;CCR7&quot;,&quot;S100A4&quot;,&quot;LYZ&quot;,&quot;MS4A7&quot;,&quot;CST3&quot;, &quot;CD79A&quot;)
-k &lt;- length(gene.1)
-imputed.cors &lt;- rep(0, k)
-og.cors &lt;- rep(0, k)
-text.lab &lt;- rep(0, k)
-for(i in 1:k){
-  imputed.cors[i] &lt;- cor(imputed.rna.mat[gene.1[i],], imputed.rna.mat[gene.2[i],])
-  og.cors[i] &lt;- cor(og.data[gene.1[i],], og.data[gene.2[i],])
-  text.lab[i] &lt;- paste0(gene.1[i],&#39;/&#39;,gene.2[i])
-}</code></pre>
-<pre class="r"><code>plot(og.cors, imputed.cors, pch=16, xlab=&#39;Original Data Pearson&#39;, ylab=&#39;Transfer Data Pearson&#39;, xlim = c(-0.2,1), ylim=c(-0.2,1))
-text(x = og.cors, y = imputed.cors, labels = text.lab, pos = 4)
-abline(a = 0, b = 1, col=&#39;red&#39;)</code></pre>
-<p><img src="integration_workflow_files/figure-html/unnamed-chunk-21-1.png" width="672" /></p>
 <p>As we can see, co-expressed genes remain co-expressed in the transferred RNA.</p>
-</div>
 <div id="enhancergene-correlations" class="section level4">
 <h4>Enhancer/gene correlations</h4>
-<pre class="r"><code>imputed.rna.mat &lt;- as.matrix(imputed.rna@data)
-og.data &lt;- as.matrix(s.rna@assays$RNA@data)</code></pre>
-<p>Here, we find all genes within 100kb of all peaks in the scATAC-seq data (~62k peaks)</p>
+<p>Here, we find all genes within 100kb of all peaks in the scATAC-seq data (~62k peaks). We will use aggregated RNA and ATAC-seq (pseudo-cells) to find robust correlations.</p>
+<pre class="r"><code>satac_agg &lt;- readRDS(&#39;data/Seurat/agg_atac_seurat.rds&#39;)
+srna_agg &lt;- readRDS(&#39;data/Seurat/agg_rna_seurat.rds&#39;)</code></pre>
+<p>Here each each dot represents ~28 cells. The pseudo-cells are labeled by the labels of their RNA counterpart. As we can see, the pseudo-cells cluster together.</p>
+<pre class="r"><code>DimPlot(satac_agg, group.by=&#39;clusters&#39;, label=T) + LegendOff() + ggtitle(&#39;Pseuo-cell ATAC-seq&#39;)</code></pre>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-21-1.png" width="672" /></p>
 <pre class="r"><code>annotations &lt;- suppressWarnings(suppressMessages(GetGRangesFromEnsDb(ensdb = EnsDb.Hsapiens.v86::EnsDb.Hsapiens.v86, verbose = F)))
 ensembldb::seqlevelsStyle(annotations) &lt;- &quot;UCSC&quot;
 exon_annotations &lt;- annotations[annotations$type==&quot;exon&quot;,]
 
-DA_peaks_GR &lt;- granges(s.atac)
+DA_peaks_GR &lt;- granges(satac_agg)
 DA_peaks_genes &lt;- plyranges::join_overlap_left(x = DA_peaks_GR, y = exon_annotations, maxgap=100000, minoverlap=0)</code></pre>
 <pre><code>## Warning in .Seqinfo.mergexy(x, y): Each of the 2 combined objects has sequence levels not in the other:
 ##   - in &#39;x&#39;: GL000194.1, GL000195.1, GL000205.2, GL000219.1, KI270713.1, KI270726.1, KI270727.1, KI270728.1
@@ -561,10 +545,12 @@ genes &lt;- genes[!duplicated(comb)]
 
 enhancers_genes_df &lt;- cbind(peakies, genes)
 enhancers_genes_df &lt;- enhancers_genes_df[!is.na(enhancers_genes_df[,&quot;genes&quot;]),]</code></pre>
-<pre class="r"><code>enhancers_genes_df &lt;- enhancers_genes_df[enhancers_genes_df[,&quot;genes&quot;] %in% rownames(og.data),]
-atac.mat &lt;- as.matrix(s.atac@assays$peaks@data)
-DA.atac.mat &lt;- atac.mat[enhancers_genes_df[,&quot;peakies&quot;],]
-genes.DA.rna.mat &lt;- og.data[enhancers_genes_df[,&quot;genes&quot;],]</code></pre>
+<pre class="r"><code>agg.atac.mat &lt;- as.matrix(satac_agg@assays$peaks@data)
+agg.rna.mat &lt;- as.matrix(srna_agg@assays$RNA@data)
+
+enhancers_genes_df &lt;- enhancers_genes_df[enhancers_genes_df[,&quot;genes&quot;] %in% rownames(agg.rna.mat),]
+DA.atac.mat &lt;- agg.atac.mat[enhancers_genes_df[,&quot;peakies&quot;],]
+genes.DA.rna.mat &lt;- agg.rna.mat[enhancers_genes_df[,&quot;genes&quot;],]</code></pre>
 <p>Get correlations between peaks and true RNA-seq data across all cells</p>
 <pre class="r"><code>row_by_row_cor &lt;- function(A, B){
   p1 &lt;- dim(A)[1]
@@ -584,13 +570,57 @@ genes.DA.rna.mat &lt;- og.data[enhancers_genes_df[,&quot;genes&quot;],]</code></
   return(rr_cors)
 }</code></pre>
 <pre class="r"><code>gene_enhancer_cor &lt;- row_by_row_cor(A = DA.atac.mat, B = genes.DA.rna.mat)</code></pre>
+<p>Transfer RNA counts to ATAC-seq cells</p>
+<pre class="r"><code>og.data &lt;- as.matrix(s.rna@assays$RNA@counts)
+imputed.rna &lt;- suppressMessages(TransferData(anchorset = anchors, refdata = og.data, weight.reduction = &#39;cca&#39;))</code></pre>
+<p>Aggregate the transferred RNA data, so we can compare to the original aggregated data.</p>
+<pre class="r"><code>aggregate.counts &lt;- list()
+imputed.counts &lt;- as.matrix(imputed.rna@data)
+for(i in unique(s.rna$seurat_clusters)){
+  sub.counts &lt;- imputed.counts[,s.rna$seurat_clusters == i]
+  aggregate.counts[[i]] &lt;- rowSums(sub.counts)
+}
+aggregate.counts &lt;- as.data.frame(aggregate.counts)
+colnames(aggregate.counts) &lt;- 1:ncol(aggregate.counts)
+
+imputed_srna_agg &lt;- CreateSeuratObject(counts = aggregate.counts)
+imputed_srna_agg &lt;- NormalizeData(imputed_srna_agg)
+imputed_srna_agg_mat &lt;- as.matrix(imputed_srna_agg@assays$RNA@data)</code></pre>
 <p>Get correlations between peaks and imputed/transferred RNA-seq data across all cells</p>
-<pre class="r"><code>genes.DA.imputed.rna.mat &lt;- imputed.rna.mat[enhancers_genes_df[,&quot;genes&quot;],]
-gene_enhancer_impt_cor &lt;- row_by_row_cor(A = DA.atac.mat, B = genes.DA.imputed.rna.mat)</code></pre>
-<p>Compare correlations.</p>
-<pre class="r"><code>plot(gene_enhancer_cor, gene_enhancer_impt_cor, xlab=&#39;Peak-Gene Pearson (True RNA)&#39;, ylab=&#39;Peak-Gene Pearson (Transferred RNA)&#39;, pch=16)
-abline(a = 0, b = 1, col=&#39;red&#39;)</code></pre>
-<p><img src="integration_workflow_files/figure-html/unnamed-chunk-28-1.png" width="672" /></p>
+<pre class="r"><code>genes.DA.rna.imputed.mat &lt;- imputed_srna_agg_mat[enhancers_genes_df[,&quot;genes&quot;],]
+
+gene_enhancer_cor_imputed &lt;- row_by_row_cor(A = DA.atac.mat, B = genes.DA.rna.imputed.mat)</code></pre>
+<p>Correlations before vs after imputation</p>
+<pre class="r"><code>plot.df &lt;- data.frame(imputed_cor = gene_enhancer_cor_imputed, true_cor=gene_enhancer_cor)
+plot.df &lt;- plot.df %&gt;% drop_na()
+get_density &lt;- function(x, y, ...) {
+  dens &lt;- MASS::kde2d(x, y, ...)
+  ix &lt;- findInterval(x, dens$x)
+  iy &lt;- findInterval(y, dens$y)
+  ii &lt;- cbind(ix, iy)
+  return(dens$z[ii])
+}
+plot.df$density &lt;- get_density(plot.df$imputed_cor, plot.df$true_cor)
+
+ggplot(plot.df, aes(x=imputed_cor, y=true_cor, color=density)) + geom_point() + ggtitle(&#39;Gene-Peak Correlation with Transfered RNA&#39;) + xlab(&#39;Pearson (imputed)&#39;) + ylab(&#39;Pearson (original)&#39;) + geom_abline(slope = 1, color=&quot;red&quot;, linetype=&quot;dashed&quot;) + ggClean() + scale_color_viridis()</code></pre>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-29-1.png" width="672" /></p>
+<pre class="r"><code>cors &lt;- seq(0.1, 0.9, by=0.05)
+recall &lt;- rep(0, length(cors))
+precision &lt;- rep(0, length(cors))
+peak_gene_str &lt;- paste0(enhancers_genes_df[,&quot;peakies&quot;],&#39;-&#39;,enhancers_genes_df[,&quot;genes&quot;])
+
+for(i in 1:length(cors)){
+  
+  ground_truth_pairs &lt;- peak_gene_str[which(abs(gene_enhancer_cor) &gt; cors[i])]
+  inferred_pairs &lt;- peak_gene_str[which(abs(gene_enhancer_cor_imputed) &gt; cors[i])]
+
+  recall[i] &lt;- length(intersect(inferred_pairs,ground_truth_pairs))/length(ground_truth_pairs)
+  precision[i] &lt;- length(intersect(inferred_pairs,ground_truth_pairs))/length(inferred_pairs)
+  
+}</code></pre>
+<pre class="r"><code>re.pre.df &lt;- data.frame(recall=recall, precision=precision, pearson=cors)
+ggplot(re.pre.df, aes(x=precision, y = recall, color=pearson)) + geom_point() + geom_line() + ggClean()</code></pre>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-31-1.png" width="672" /></p>
 </div>
 </div>
 </div>

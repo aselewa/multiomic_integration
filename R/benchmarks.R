@@ -27,6 +27,6 @@ for(name in n){
   nclusts.list[[name]] <- nclusts
 }
 
-saveRDS(lab.acc.list, file = 'data/transfer_label_benchmarks/label_transfer_accuracy_kfilter.rds')
-saveRDS(nclusts.list, file = 'data/transfer_label_benchmarks/label_transfer_nclusts_kfilter.rds')
+saveRDS(lab.acc.list, file = 'data/transfer_label_benchmarks/label_transfer_accuracy_kfilter_2.rds')
+saveRDS(nclusts.list, file = 'data/transfer_label_benchmarks/label_transfer_nclusts_kfilter_2.rds')
 saveRDS(res, file='data/transfer_label_benchmarks/resolutions.rds')

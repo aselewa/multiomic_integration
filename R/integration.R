@@ -2,7 +2,7 @@ library(Seurat)
 library(Signac)
 
 setwd('/project2/gca/aselewa/integration_benchmarks/')
-source('seurat_integration.R')
+source('R/seurat_integration.R')
 
 comb <- Matrix::readMM(file = 'data/filtered_feature_bc_matrix/matrix.mtx')
 features <- readr::read_tsv(file = 'data/filtered_feature_bc_matrix/features.tsv', col_names = F)
@@ -66,11 +66,54 @@ for(k.anchor in k.filters){
 
 k.filters <- c(10, 100, 200, 500, Inf)
 for(k.filter in k.filters){
-  anchors <- get_integration_anchors(RNA = s.rna, ATAC = s.atac, k.filter = k.filter)
+  anchors <- get_integration_anchors(RNA = s.rna, ATAC = s.atac, k.filter = ifelse(is.infinite(k.filter), NA, k.filter))
   saveRDS(anchors, paste0('data/anchors/anchors_kfilter_',k.filter,'.rds'))
 }
 
 saveRDS(s.rna, 'data/rna_seurat.rds')
 saveRDS(s.atac, 'data/atac_seurat.rds')
 
+## Aggregate into pseudo cells
 
+s.rna <- FindClusters(s.rna, resolution = 50) # fine-scale clustering
+
+aggregate.counts <- list()
+type <- c()
+og.counts <- as.matrix(s.rna@assays$RNA@counts)
+for(i in unique(s.rna$seurat_clusters)){
+  sub.counts <- og.counts[,s.rna$seurat_clusters == i]
+  aggregate.counts[[i]] <- rowSums(sub.counts)
+  type <- c(type, as.character(s.rna$clusters[s.rna$seurat_clusters == i][1]))
+}
+aggregate.counts <- as.data.frame(aggregate.counts)
+colnames(aggregate.counts) <- 1:ncol(aggregate.counts)
+
+srna_agg <- CreateSeuratObject(counts = aggregate.counts, project = "aggregate_RNA")
+srna_agg$clusters <- type
+srna_agg <- NormalizeData(srna_agg)
+srna_agg <- FindVariableFeatures(srna_agg)
+srna_agg <- ScaleData(srna_agg)
+srna_agg <- RunPCA(srna_agg, verbose = F)
+srna_agg <- FindNeighbors(srna_agg, reduction = "pca", dims = 1:10)
+srna_agg <- RunUMAP(srna_agg, reduction = "pca", dims = 1:10)
+
+aggregate.counts <- list()
+og.counts <- as.matrix(s.atac@assays$peaks@counts)
+for(i in unique(s.rna$seurat_clusters)){
+  sub.counts <- og.counts[ , s.rna$seurat_clusters == i]
+  aggregate.counts[[i]] <- rowSums(sub.counts)
+}
+aggregate.counts <- as.data.frame(aggregate.counts)
+colnames(aggregate.counts) <- 1:ncol(aggregate.counts)
+
+satac_agg <- CreateChromatinAssay(counts = aggregate.counts, sep = c(':','-'))
+satac_agg <- CreateSeuratObject(counts = satac_agg, assay = "peaks", project = "aggregate_peaks")
+satac_agg$clusters <- type
+satac_agg <- RunTFIDF(satac_agg)
+satac_agg <- FindTopFeatures(satac_agg, min.cutoff = 'q0')
+satac_agg <- RunSVD(satac_agg)
+satac_agg <- FindNeighbors(object = satac_agg, reduction = 'lsi', dims = 2:10)
+satac_agg <- RunUMAP(object = satac_agg, reduction = 'lsi', dims = 2:10)
+
+saveRDS(srna_agg, 'data/agg_rna_seurat.rds')
+saveRDS(satac_agg, 'data/agg_atac_seurat.rds')
