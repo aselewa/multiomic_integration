@@ -347,26 +347,46 @@ Here we plot the recall vs precision at various cutoffs of the Pearson correlati
 
 ```{r}
 
-cors <- seq(0.1, 0.9, by=0.05)
-recall <- rep(0, length(cors))
-precision <- rep(0, length(cors))
+cors <- seq(0.1, 0.9, by=0.1)
+cutoff <- c(0.3, 0.5, 0.7)
+recall.list <- list()
+precision.list <- list()
 peak_gene_str <- paste0(enhancers_genes_df[,"peakies"],'-',enhancers_genes_df[,"genes"])
 
-for(i in 1:length(cors)){
+for(c in cutoff){
+ recall <- rep(0, length(cors))
+ precision <- rep(0, length(cors))
+ pos_ground_truth_pairs <- peak_gene_str[which(gene_enhancer_cor > c)]
+ neg_ground_truth_pairs <- peak_gene_str[which(gene_enhancer_cor < -c)]
+ 
+ for(i in 1:length(cors)){
+  pos_inferred_pairs <- peak_gene_str[which(gene_enhancer_cor_imputed > cors[i])]
+  neg_inferred_pairs <- peak_gene_str[which(gene_enhancer_cor_imputed < -cors[i])]
   
-  ground_truth_pairs <- peak_gene_str[which(abs(gene_enhancer_cor) > cors[i])]
-  inferred_pairs <- peak_gene_str[which(abs(gene_enhancer_cor_imputed) > cors[i])]
-
-  recall[i] <- length(intersect(inferred_pairs,ground_truth_pairs))/length(ground_truth_pairs)
-  precision[i] <- length(intersect(inferred_pairs,ground_truth_pairs))/length(inferred_pairs)
+  pairs_in_common <- length(c(intersect(pos_ground_truth_pairs, pos_inferred_pairs), 
+                              intersect(neg_ground_truth_pairs, neg_inferred_pairs)))
   
+  recall_denom <- length(pos_ground_truth_pairs) + length(neg_ground_truth_pairs)
+  precision_denom <- length(pos_inferred_pairs) + length(neg_inferred_pairs)
+    
+  recall[i] <- pairs_in_common/recall_denom
+  precision[i] <- pairs_in_common/precision_denom
+  
+ }
+ recall.list[[as.character(c)]] <- recall
+ precision.list[[as.character(c)]] <- precision
 }
-
 ```
 
 ```{r}
-re.pre.df <- data.frame(recall=recall, precision=precision, pearson=cors)
-ggplot(re.pre.df, aes(x=precision, y = recall, color=pearson)) + geom_point() + geom_line() + ggClean()
+recall <- unlist(recall.list, use.names = F)
+precision <- unlist(precision.list, use.names = F)
+re.pre.df <- data.frame(recall=recall, 
+                        precision=precision, 
+                        pearson=rep(cors, length(cutoff)), 
+                        cutoff=as.character(c(rep(cutoff[1],length(cors)), rep(cutoff[2], length(cors)), rep(cutoff[3],length(cors)))))
+
+ggplot(re.pre.df, aes(x=precision, y = recall, color=cutoff)) + geom_point() + geom_line() + ggClean() + labs(color="GT Pearson\nCutoff")
 ```
 
 

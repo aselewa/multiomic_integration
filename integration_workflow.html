@@ -387,10 +387,13 @@ div.tocify {
 <pre class="r"><code>s.rna &lt;- readRDS(&#39;data/Seurat/rna_seurat.rds&#39;)
 s.atac &lt;- readRDS(&#39;data/Seurat/atac_seurat.rds&#39;)
 anchors &lt;- readRDS(&#39;data/anchors/anchors_kanchor_5.rds&#39;)</code></pre>
-<pre class="r"><code>p1 &lt;- DimPlot(s.rna, label=T, group.by=&#39;clusters&#39;) + NoLegend() + ggtitle(&#39;scRNA-seq&#39;)
-p2 &lt;- DimPlot(s.atac, label=T, group.by=&#39;clusters&#39;) + NoLegend() + ggtitle(&#39;scATAC-seq&#39;)
+<pre class="r"><code>p1 &lt;- DimPlot(s.rna, label=T, group.by=&#39;clusters&#39;) + NoLegend() + ggtitle(&#39;scRNA-seq&#39;)</code></pre>
+<pre><code>## Warning: Using `as.character()` on a quosure is deprecated as of rlang 0.3.0.
+## Please use `as_label()` or `as_name()` instead.
+## This warning is displayed once per session.</code></pre>
+<pre class="r"><code>p2 &lt;- DimPlot(s.atac, label=T, group.by=&#39;clusters&#39;) + NoLegend() + ggtitle(&#39;scATAC-seq&#39;)
 p1 + p2</code></pre>
-<p><img src="integration_workflow_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
 </div>
 <div id="evaluating-anchors" class="section level2">
 <h2>Evaluating anchors</h2>
@@ -400,18 +403,18 @@ cells2 &lt;- anchors@anchors[,&quot;cell2&quot;]</code></pre>
 <pre class="r"><code>num_cells &lt;- c(length(unique(cells1)), length(unique(cells2)))/length(Cells(s.rna))
 names(num_cells) &lt;- c(&#39;RNA&#39;, &#39;ATAC&#39;)
 barplot(num_cells, ylab=&#39;Proportion of Cells&#39;,xlab=&#39;Assay&#39;, main=&#39;Contribution to Anchors&#39;)</code></pre>
-<p><img src="integration_workflow_files/figure-html/unnamed-chunk-5-1.png" width="672" /></p>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
 <pre class="r"><code>freq_cells1 &lt;- table(cells1)
 hist_cells1 &lt;- rep(0, max(freq_cells1))
 for(i in 1:max(freq_cells1)){
   hist_cells1[i] &lt;- sum(freq_cells1==i)
 }
 barplot(hist_cells1, names.arg = 1:max(freq_cells1), ylab=&#39;Number of Cells&#39;, xlab=&#39;Frequency&#39;, main=&#39;Frequency of cells used in Anchors (RNA)&#39;)</code></pre>
-<p><img src="integration_workflow_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
 <pre class="r"><code>same_cell &lt;- c(sum(cells1 == cells2), sum(cells1 != cells2))
 names(same_cell) &lt;- c(&#39;same cell&#39;, &#39;different cell&#39;)
 barplot(same_cell, ylab=&#39;Anchors&#39;,xlab=&#39;Anchor Pairs&#39;, main=&#39;Anchor Pair Correspondence&#39;)</code></pre>
-<p><img src="integration_workflow_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
 <pre class="r"><code>cells1_clust &lt;- as.character(s.rna$clusters[cells1])
 cells2_clust &lt;- as.character(s.atac$clusters[cells2])
 cell_type_agree &lt;- c(sum(cells1_clust != cells2_clust), sum(cells1_clust == cells2_clust))
@@ -423,7 +426,7 @@ scores_disagree &lt;- anchors@anchors[cells1_clust != cells2_clust, &quot;score&
 par(mfrow=c(1,2))
 barplot(cell_type_agree, ylab=&#39;Anchors&#39;,xlab=&#39;Cell Type Assignment&#39;, main=&#39;Anchors Cluster Agreement&#39;)
 boxplot(scores_disagree, scores_agree, names = c(&#39;Disagree&#39;,&#39;Agree&#39;), ylab=&#39;Anchor Score&#39;, main=&#39;Anchor Scores&#39;)</code></pre>
-<p><img src="integration_workflow_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-9-1.png" width="672" /></p>
 </div>
 <div id="label-transfer" class="section level2">
 <h2>Label Transfer</h2>
@@ -432,7 +435,7 @@ boxplot(scores_disagree, scores_agree, names = c(&#39;Disagree&#39;,&#39;Agree&#
 p1 &lt;- DimPlot(s.rna, label=T, group.by=&#39;clusters&#39;) + NoLegend() + ggtitle(&#39;scRNA-seq&#39;)
 p2 &lt;- DimPlot(s.atac, label=T, group.by=&#39;RNA_IDENT&#39;) + NoLegend() + ggtitle(&#39;scATAC-seq&#39;)
 p1 + p2</code></pre>
-<p><img src="integration_workflow_files/figure-html/unnamed-chunk-9-1.png" width="672" /></p>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-10-1.png" width="672" /></p>
 <p>Because we know the actual cell-type label of ATAC cells (based on their paired RNA data), we can ask if the transferred label agrees with the actual label.</p>
 <pre class="r"><code>cell_type_agree &lt;- c(sum(s.atac$RNA_IDENT != s.atac$clusters), sum(s.atac$RNA_IDENT == s.atac$clusters))
 names(cell_type_agree) &lt;- c(&#39;Disagree&#39;, &#39;Agree&#39;)
@@ -443,7 +446,7 @@ scores_disagree &lt;- s.atac$PREDICTED_SCORE_MAX[s.atac$RNA_IDENT == s.atac$clus
 par(mfrow=c(1,2))
 barplot(cell_type_agree, ylab=&#39;ATAC Cells&#39;,xlab=&#39;Transferred Label Status&#39;, main=&#39;ATAC Label Transfer&#39;)
 boxplot(scores_agree, scores_disagree, names = c(&#39;Disagree&#39;,&#39;Agree&#39;), ylab=&#39;Max Predicted Score&#39;, xlab=&#39;Transferred Label Status&#39;, main=&#39;ATAC Label Transfer Max Score&#39;)</code></pre>
-<p><img src="integration_workflow_files/figure-html/unnamed-chunk-10-1.png" width="672" /></p>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-11-1.png" width="672" /></p>
 <div id="benchmarking-label-transfer" class="section level3">
 <h3>Benchmarking label transfer</h3>
 <p>Here we look at the performance of label transfer under different clustering resolutions. The benchmark procedure is summarized below:</p>
@@ -484,7 +487,7 @@ colnames(benchmark.df) &lt;- c(&quot;k.filter&quot;,&quot;TransferLabelAcurracy&
 benchmark.df$res &lt;- rep(res, length(lab.acc.smooth))</code></pre>
 <pre class="r"><code>p2 &lt;- ggplot(benchmark.df, aes(x=res, y=TransferLabelAcurracy, color=k.filter)) + geom_point() + geom_line() + ggClean() + xlab(&#39;Resolution&#39;) + ylab(&#39;Transfer Label Accuracy&#39;) + ggtitle(&#39;kfilter benchmark&#39;)</code></pre>
 <pre class="r"><code>p1 + p2</code></pre>
-<p><img src="integration_workflow_files/figure-html/unnamed-chunk-15-1.png" width="960" /></p>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-16-1.png" width="960" /></p>
 <p>Based on the above results, it seems that the metric is fairly robust to the <code>k.anchor</code> parameter. Furthermore, it seems that filtering anchors according to high dimension generally not a good idea because turning off the <code>k.filter</code> by setting it to <code>Inf</code> results in using all anchors and achieves higher accuracy.</p>
 </div>
 </div>
@@ -517,7 +520,7 @@ for(i in 1:n){
 <pre class="r"><code>par(mfrow=c(1,2))
 hist(cell.cor, xlab=&#39;Pearson&#39;, main=&#39;Cells&#39;)
 hist(gene.cor, xlab=&#39;Pearson&#39;, main=&#39;Top 100 Genes&#39;)</code></pre>
-<p><img src="integration_workflow_files/figure-html/unnamed-chunk-19-1.png" width="672" /></p>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-20-1.png" width="672" /></p>
 </div>
 <div id="peak-gene-correlations-in-pseudo-cells" class="section level3">
 <h3>Peak-gene correlations in pseudo-cells</h3>
@@ -526,7 +529,7 @@ hist(gene.cor, xlab=&#39;Pearson&#39;, main=&#39;Top 100 Genes&#39;)</code></pre
 srna_agg &lt;- readRDS(&#39;data/Seurat/agg_rna_seurat.rds&#39;)</code></pre>
 <p>Here each each dot represents ~28 cells. The pseudo-cells are labeled by the labels of their RNA counterpart. As we can see, the pseudo-cells cluster together.</p>
 <pre class="r"><code>DimPlot(satac_agg, group.by=&#39;clusters&#39;, label=T) + LegendOff() + ggtitle(&#39;Pseudo-cell ATAC-seq&#39;)</code></pre>
-<p><img src="integration_workflow_files/figure-html/unnamed-chunk-21-1.png" width="672" /></p>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-22-1.png" width="672" /></p>
 <p>Lets find every gene within 100kb of each peak.</p>
 <pre class="r"><code>annotations &lt;- suppressWarnings(suppressMessages(GetGRangesFromEnsDb(ensdb = EnsDb.Hsapiens.v86::EnsDb.Hsapiens.v86, verbose = F)))
 ensembldb::seqlevelsStyle(annotations) &lt;- &quot;UCSC&quot;
@@ -601,28 +604,49 @@ get_density &lt;- function(x, y, ...) {
 plot.df$density &lt;- get_density(plot.df$imputed_cor, plot.df$true_cor)
 
 ggplot(plot.df, aes(x=imputed_cor, y=true_cor, color=density)) + geom_point() + ggtitle(&#39;Gene-Peak Correlation with Transfered RNA&#39;) + xlab(&#39;Pearson (imputed)&#39;) + ylab(&#39;Pearson (original)&#39;) + geom_abline(slope = 1, color=&quot;red&quot;, linetype=&quot;dashed&quot;) + ggClean() + scale_color_viridis()</code></pre>
-<p><img src="integration_workflow_files/figure-html/unnamed-chunk-29-1.png" width="672" /></p>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-30-1.png" width="672" /></p>
 </div>
 <div id="precision-recall-of-gene-peaks-detected" class="section level3">
 <h3>Precision-recall of gene-peaks detected</h3>
 <p>Here we plot the recall vs precision at various cutoffs of the Pearson correlation coefficient. The recall/precision are computed w.r.t the gene-peak correlations in the original multiome data (with pseudo-cells)</p>
-<pre class="r"><code>cors &lt;- seq(0.1, 0.9, by=0.05)
-recall &lt;- rep(0, length(cors))
-precision &lt;- rep(0, length(cors))
+<pre class="r"><code>cors &lt;- seq(0.1, 0.9, by=0.1)
+cutoff &lt;- c(0.3, 0.5, 0.7)
+recall.list &lt;- list()
+precision.list &lt;- list()
 peak_gene_str &lt;- paste0(enhancers_genes_df[,&quot;peakies&quot;],&#39;-&#39;,enhancers_genes_df[,&quot;genes&quot;])
 
-for(i in 1:length(cors)){
+for(c in cutoff){
+ recall &lt;- rep(0, length(cors))
+ precision &lt;- rep(0, length(cors))
+ pos_ground_truth_pairs &lt;- peak_gene_str[which(gene_enhancer_cor &gt; c)]
+ neg_ground_truth_pairs &lt;- peak_gene_str[which(gene_enhancer_cor &lt; -c)]
+ 
+ for(i in 1:length(cors)){
+  pos_inferred_pairs &lt;- peak_gene_str[which(gene_enhancer_cor_imputed &gt; cors[i])]
+  neg_inferred_pairs &lt;- peak_gene_str[which(gene_enhancer_cor_imputed &lt; -cors[i])]
   
-  ground_truth_pairs &lt;- peak_gene_str[which(abs(gene_enhancer_cor) &gt; cors[i])]
-  inferred_pairs &lt;- peak_gene_str[which(abs(gene_enhancer_cor_imputed) &gt; cors[i])]
-
-  recall[i] &lt;- length(intersect(inferred_pairs,ground_truth_pairs))/length(ground_truth_pairs)
-  precision[i] &lt;- length(intersect(inferred_pairs,ground_truth_pairs))/length(inferred_pairs)
+  pairs_in_common &lt;- length(c(intersect(pos_ground_truth_pairs, pos_inferred_pairs), 
+                              intersect(neg_ground_truth_pairs, neg_inferred_pairs)))
   
+  recall_denom &lt;- length(pos_ground_truth_pairs) + length(neg_ground_truth_pairs)
+  precision_denom &lt;- length(pos_inferred_pairs) + length(neg_inferred_pairs)
+    
+  recall[i] &lt;- pairs_in_common/recall_denom
+  precision[i] &lt;- pairs_in_common/precision_denom
+  
+ }
+ recall.list[[as.character(c)]] &lt;- recall
+ precision.list[[as.character(c)]] &lt;- precision
 }</code></pre>
-<pre class="r"><code>re.pre.df &lt;- data.frame(recall=recall, precision=precision, pearson=cors)
-ggplot(re.pre.df, aes(x=precision, y = recall, color=pearson)) + geom_point() + geom_line() + ggClean()</code></pre>
-<p><img src="integration_workflow_files/figure-html/unnamed-chunk-31-1.png" width="672" /></p>
+<pre class="r"><code>recall &lt;- unlist(recall.list, use.names = F)
+precision &lt;- unlist(precision.list, use.names = F)
+re.pre.df &lt;- data.frame(recall=recall, 
+                        precision=precision, 
+                        pearson=rep(cors, length(cutoff)), 
+                        cutoff=as.character(c(rep(cutoff[1],length(cors)), rep(cutoff[2], length(cors)), rep(cutoff[3],length(cors)))))
+
+ggplot(re.pre.df, aes(x=precision, y = recall, color=cutoff)) + geom_point() + geom_line() + ggClean() + labs(color=&quot;GT Pearson\nCutoff&quot;)</code></pre>
+<p><img src="integration_workflow_files/figure-html/unnamed-chunk-32-1.png" width="672" /></p>
 </div>
 </div>
 
