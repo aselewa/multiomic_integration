@@ -177,14 +177,16 @@ Based on the above results, it seems that the metric is fairly robust to the `k.
 
 ## RNA Transfer
 
-We can also transfer gene expression from RNA to ATAC. 
+We can also transfer gene expression from RNA to ATAC. But how good is the transfer of RNA data? Here we explore this by looking at peak-gene correlations in close detail. In particular, we grab all genes within 100kb of each peak (~200k pairs) and then find their correlations using pseudo-cells. A pseudo-cell here contains aggregated read counts for RNA and ATAC-seq across 28 cells. 
+
+### Simple correlations before vs after transfer 
+
+Lets transfer some data and see how the cells and genes correlate with the original RNA data. 
 
 ```{r}
 og.data <- as.matrix(s.rna@assays$RNA@data)
 imputed.rna <- suppressMessages(TransferData(anchorset = anchors, refdata = og.data, weight.reduction = 'cca'))
 ```
-
-### Correlations before and after imputations
 
 ```{r}
 imputed.rna.mat <- as.matrix(imputed.rna@data)
@@ -216,9 +218,7 @@ hist(cell.cor, xlab='Pearson', main='Cells')
 hist(gene.cor, xlab='Pearson', main='Top 100 Genes')
 ```
 
-As we can see, co-expressed genes remain co-expressed in the transferred RNA.
-
-#### Enhancer/gene correlations
+### Peak-gene correlations in pseudo-cells 
 
 Here, we find all genes within 100kb of all peaks in the scATAC-seq data (~62k peaks). We will use aggregated RNA and ATAC-seq (pseudo-cells) to find robust correlations.
 
@@ -233,6 +233,7 @@ Here each each dot represents ~28 cells. The pseudo-cells are labeled by the lab
 DimPlot(satac_agg, group.by='clusters', label=T) + LegendOff() + ggtitle('Pseuo-cell ATAC-seq')
 ```
 
+Lets find every gene within 100kb of each peak.
 
 ```{r}
 annotations <- suppressWarnings(suppressMessages(GetGRangesFromEnsDb(ensdb = EnsDb.Hsapiens.v86::EnsDb.Hsapiens.v86, verbose = F)))
@@ -240,7 +241,7 @@ ensembldb::seqlevelsStyle(annotations) <- "UCSC"
 exon_annotations <- annotations[annotations$type=="exon",]
 
 DA_peaks_GR <- granges(satac_agg)
-DA_peaks_genes <- plyranges::join_overlap_left(x = DA_peaks_GR, y = exon_annotations, maxgap=100000, minoverlap=0)
+DA_peaks_genes <- suppressWarnings(plyranges::join_overlap_left(x = DA_peaks_GR, y = exon_annotations, maxgap=100000, minoverlap=0))
 peakies <- Signac::GRangesToString(DA_peaks_genes)
 genes <- DA_peaks_genes$gene_name
 comb <- paste0(peakies, '-', genes)
@@ -252,6 +253,7 @@ enhancers_genes_df <- enhancers_genes_df[!is.na(enhancers_genes_df[,"genes"]),]
 
 ```
 
+Pull aggregated pseudo-cell data.
 
 ```{r}
 agg.atac.mat <- as.matrix(satac_agg@assays$peaks@data)
@@ -339,6 +341,9 @@ plot.df$density <- get_density(plot.df$imputed_cor, plot.df$true_cor)
 ggplot(plot.df, aes(x=imputed_cor, y=true_cor, color=density)) + geom_point() + ggtitle('Gene-Peak Correlation with Transfered RNA') + xlab('Pearson (imputed)') + ylab('Pearson (original)') + geom_abline(slope = 1, color="red", linetype="dashed") + ggClean() + scale_color_viridis()
 ```
 
+### Precision-recall of gene-peaks detected
+
+Here we plot the recall vs precision at various cutoffs of the Pearson correlation coefficient. The recall/precision are computed w.r.t the gene-peak correlations in the original multiome data (with pseudo-cells)
 
 ```{r}
 
